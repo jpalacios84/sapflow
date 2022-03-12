@@ -13,7 +13,7 @@ warnings.filterwarnings('error')
 
 # Van Genuchten constitutive relations
 @njit
-def Cw(h):
+def Cw(h): 
     return -α*n*m*(1 + (α*h)**n)**(-(m+1)) * (α*h)**(n-1)
 
 @njit
@@ -30,33 +30,35 @@ def invθ(θ): # h
 
 # Solver settings
 # ---------------
-sol_do_calibration_workflow = False
+sol_do_calibration_workflow = True   
 sol_compute_residuals = True
 sol_compute_numerical_probes = True
 sol_datafile = 'DF27_period1_reduced.csv' # 'test_data.csv'
 
-sol_use_RWU = True
-sol_use_free_drainage_bc = True
+sol_use_RWU = False
+sol_use_free_drainage_bc = True #Boundary ~pp190
 
 # Simulation parameters
 # ---------------------
-θr = 0.01
-θs = 0.99
+θr = 0.01 #0.01
+θs = 0.539 #value for vertical fracture fillings karst (Yang)
 θdry = 0.01 + 0.0001
 gbc = 0.1 # Constant gradient at lower boundary (L/L)
-m  = 0.65
+m  = 0.99
 n  = 1/(1 - m)
+#n = 1.055 #soil physics w py
+#m = 1-(1/n)
 l = 1
-Ks = 1e-5
-α = -1.11
+Ks = 1e-4
+α = -4.9e-4 #units m-1
 Z = 200/1000
 
 τ0 = 0
-τ = 3600*2
+τ = 3600*24 #total time of simulation *24 is a whole day 
 t_checkpoints = [n*τ/8 for n in range(8+1)]
 dt = 0.75
 dz = Z/100
-Nz = int(Z/dz)
+Nz = int(Z/dz) #depth of fracture numero de cajitas 
 
 # Root water uptake
 # -----------------
@@ -80,10 +82,13 @@ np_dΨx = []
 print(f'>> dt={round(dt,4)}s, dz={round(dz,4)}m, Nz={Nz}')
 
 # Initial conditions
-h0 = np.zeros(Nz+2)
-h0[0] = invθ(0.4)
-h0[1:-1] = invθ(θdry)
-h0[-1] = invθ(θdry)
+h0 = np.zeros(Nz+2) 
+#h0[0] = invθ(0.4) #inversa de Van genuchte 
+#h0[1:-1] = invθ(0.4) #agarro elementos intermedios, puedo saturar todo el perfil 
+#h0[-1] = invθ(0.4) #cambiar aca si quiero local water table, neumann es free drainage θdry
+
+h0[0:5] = invθ(0.4) #inversa de Van genuchte 
+h0[5:]= invθ(θdry) #θdry
 
 @njit
 def log_mean_p(X):
@@ -143,9 +148,9 @@ def create_coeff_matrix(h, Cw):
 
 def lower_boundary_condition(h):
     if sol_use_free_drainage_bc:
-        return h[-2] + dz*(gbc - 1)
+        return h[-2] + dz*(gbc - 1) #neuman 
     else:
-        return h[-1]
+        return h[-1] #dirichlet 
 
 def upper_boundary_condition(r=None):
     return h0[0] if r == None else r # Dirichlet
@@ -167,6 +172,11 @@ if sol_do_calibration_workflow:
     __tchecks = list(reversed(t_checkpoints))
     current_checkpoint = __tchecks.pop()
     while t <= τ:
+        # Misc. bookeeping
+        if t >= current_checkpoint:
+            all_h.append(h.copy())
+            current_checkpoint = __tchecks.pop() if len(__tchecks) > 0 else 1e99
+
         hm = h.copy()
         hm[0] = upper_boundary_condition()
         hm[-1] = lower_boundary_condition(hm)
@@ -187,11 +197,6 @@ if sol_do_calibration_workflow:
                     np_residual_median.append(np.median(residual))
                     np_residual_max.append(np.max(residual))
                 current_probe_sp += np_probe_every_s
-
-        # Misc. bookeeping
-        if t >= current_checkpoint:
-            all_h.append(h.copy())
-            current_checkpoint = __tchecks.pop() if len(__tchecks) > 0 else 1e99
 
         print(f'Progress: {round(100*t/τ)}%   ', end='\r')
         t += dt
@@ -238,7 +243,7 @@ if sol_do_calibration_workflow:
     ax3.set_ylim([Z, 0])
     ax3.set_xlabel('θ $(\\frac{cm^3}{cm^3})$')
     ax3.set_ylabel('z (m)')
-    ax3.plot([θr, θr], [z[0], z[-1]], label='Residual', color='red', linestyle='--', linewidth=0.5)
+   # ax3.plot([θr, θr], [z[0], z[-1]], label='Residual', color='red', linestyle='--', linewidth=0.5)
     ax3.plot([θs, θs], [z[0], z[-1]], label='Saturation', color='blue', linestyle='--', linewidth=0.5)
     ax3.legend()
 
@@ -283,7 +288,7 @@ else:
     print(f'>> Running full model with input file {sol_datafile}')
     print(f'>> Simulating {round(ds_rain.shape[0]/2)} hours-clock')
     start_time = time()
-    for i,(timestamp, rain, m_Ψx) in enumerate(zip(ds_domain, ds_rain, ds_Ψx)):
+    for i,(timestamp, rain, m_Ψx) in enumerate(zip(ds_domain, ds_rain, ds_Ψx)): #reads rain from data 
         print(f'[{round(100*i/ds_rain.shape[0])}%] Timestamp: {timestamp}, Rain (mm): {rain}')
         t = 0
         τ = 3600/2
@@ -291,11 +296,11 @@ else:
         int_rwu = 0
         while t <= τ:
             hm = h.copy()
-            hm[0] = upper_boundary_condition(invθ(min(rain, θs)) if rain != 0 else invθ(θdry))
+            hm[0] = upper_boundary_condition(invθ(min(rain, θs/2)) if rain != 0 else invθ(0.1)) #rain 
             hm[-1] = lower_boundary_condition(hm)
 
             hi = try_run_solver(hm, t, m_Ψx, Cw(h))
-            hi[0] = upper_boundary_condition(invθ(min(rain, θs)) if rain != 0 else invθ(θdry))
+            hi[0] = upper_boundary_condition(invθ(min(rain, θs/2)) if rain != 0 else invθ(0.1)) #θdry
             hi[-1] = lower_boundary_condition(hi)
             h = try_run_solver(hm, t, m_Ψx, Cw((hi + hm)/2))
 
@@ -338,7 +343,7 @@ else:
     ax2.set_xlim([from_date, to_date])
     # ax2.set_ylim([0, 10000])
     ax2.plot(ds_domain, ds_sapflow, linewidth=0.5, label='Sapflow (Measurement)')
-    ax2.plot(ds_domain, np.array(np_RWU)*500, linewidth=0.5, label='RWU (Model)')
+    ax2.plot(ds_domain, np.array(np_RWU), linewidth=0.5, label='RWU (Model)') #factor de escala 500 a array 
     # ax2.plot(ds_domain, np.array(np_RWU) - np.array(np_dΨx)*C, linewidth=0.5, label='Sapflow (Model)')
     ax2.grid()
     ax2.legend()

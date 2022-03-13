@@ -44,7 +44,7 @@ sol_use_free_drainage_bc = True # Soil physics with Hydrus ~pp190
 # ---------------------
 θr = 0.01
 θs = 0.539 # Value for vertical fracture fillings karst (Yang)
-θdry = 0.01 + 0.0001
+θdry = θr + 0.0001
 gbc = 0.1 # Constant gradient at lower boundary (L/L)
 m  = 0.99
 n  = 1/(1 - m)
@@ -164,9 +164,7 @@ def upper_boundary_condition(h, rain=None):
         return h[0]
     else:
         θ0 = θ(h[0])
-        if rain > 0:
-            assert True, ''
-        return invθ(max(θdry, θ0 - dt*a1 + dt*a2*rain*(1/θ0)))
+        return invθ(min(max(θdry, θ0 - dt*a1 + dt*a2*rain*(1/θ0)), θs))
 
 def try_run_solver(h, t, Ψx, Cw, timestamp=None):
     try:
@@ -219,8 +217,8 @@ if sol_do_calibration_workflow:
     print(f'>> Computation took {round(end_time - start_time)} s')
 
     # Safe to remove: the following 2 lines simplify working on the chart without having to execute the full solver.
-    pd.to_pickle((h, all_h, np_surface_head, np_residual_median, np_residual_max), './data.pkl')
-    (h, all_h, np_surface_head, np_residual_median, np_residual_max) = pd.read_pickle('./data.pkl')
+    # pd.to_pickle((h, all_h, np_surface_head, np_residual_median, np_residual_max), './data.pkl')
+    # (h, all_h, np_surface_head, np_residual_median, np_residual_max) = pd.read_pickle('./data.pkl')
 
     plt.style.use('bmh')
 
@@ -367,4 +365,4 @@ else:
     ax3.legend()
 
     plt.tight_layout()
-    plt.savefig(f'richards_{sol_datafile}.png')
+    plt.savefig(f'richards_with_data.png')

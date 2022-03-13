@@ -329,8 +329,8 @@ else:
     print(f'>> Computation took {round((end_time - start_time)/round(ds_rain.shape[0]), 2)} seconds per 30 minutes-clock')
     print(f'>> Total simulation time: {round(end_time - start_time)} s')
 
-    pd.to_pickle((np_surface_head, np_RWU), './data.pkl')
-    (np_surface_head, np_RWU) = pd.read_pickle('./data.pkl')
+    # pd.to_pickle((np_surface_head, np_RWU), './data.pkl')
+    # (np_surface_head, np_RWU) = pd.read_pickle('./data.pkl')
 
     extended_domain = pd.to_datetime(np.linspace(from_date.value, to_date.value, len(np_surface_head)))
 

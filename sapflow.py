@@ -33,12 +33,12 @@ def invθ(θ): # h
 sol_do_calibration_workflow = False
 sol_compute_residuals = True
 sol_compute_numerical_probes = True
-sol_datafile = './field_measurements/DF27_period1_reduced.csv' # 'test_data.csv'
+sol_datafile = './field_measurements/DF27_period1.csv'
 
-sol_use_RWU = False
+sol_use_RWU = True
 RWU_start_hour = 8
 RWU_end_hour = 23
-sol_use_free_drainage_bc = True # Soil physics with Hydrus ~pp190
+sol_use_free_drainage_bc = False # Soil physics with Hydrus ~pp190
 
 # Simulation parameters
 # ---------------------
@@ -50,9 +50,14 @@ m  = 0.99
 n  = 1/(1 - m)
 #m = 1-(1/n)
 l = 1
-Ks = 1e-6
-α = -1#-4.9e-4
+# Empirical observations on the numerial value of Ks
+# 1e-3 -- Extremely quick infiltration
+# 1e-6 -- Clay-like infiltration
+Ks = 5e-6
+α = -0.99
 Z = 200/1000
+ρ = 1000 # kg/m3
+g = 9.81 # m/s2
 τ0 = 0
 τ = 3600*24 # total time of simulation *24 is a whole day
 t_checkpoints = [n*τ/8 for n in range(8+1)]
@@ -61,14 +66,19 @@ dz = Z/100
 Nz = int(Z/dz) # grid cell count
 
 # Surface boundary conditions parameters
-a1 = 0.0003
-a2 = 0.002
+evaporation_rate = 0
+a1 = 100 # Evaporation factor units
+a2 = 1 # Rain factor units
+
+# Initial conditions
+h0 = np.zeros(Nz+2)
+h0[:] = invθ(0.4)
 
 # Root water uptake
 # -----------------
 Ψx = -1e6
 β = 0.01
-Rmin = 1e8
+Rmin = 1
 d = 1e6
 Brwu = 0.74
 C = 1e-6
@@ -76,19 +86,17 @@ C = 1e-6
 # Numerical probes
 # ----------------
 np_probe_every_s = 60 # s
-np_probe_depth = 25 # dz = 25mm
-np_surface_head = []
+np_probe_depth = 0 # dz = 20mm
+np_surface_head_0 = []
+np_surface_head_5 = []
+np_surface_head_10 = []
+np_surface_head_20 = []
 np_residual_median = []
 np_residual_max = []
 np_RWU = []
 np_dΨx = []
 
 print(f'>> dt={round(dt,4)}s, dz={round(dz,4)}m, Nz={Nz}')
-
-# Initial conditions
-h0 = np.zeros(Nz+2)
-h0[0] = invθ(0.4)
-h0[1:]= invθ(θdry)
 
 @njit
 def log_mean_p(X):
@@ -122,7 +130,7 @@ def compute_RWU(h, Ψx, timestamp):
         Rr = np.array([Rp/(λ*β**(i*dz/Z)) for (i,_) in enumerate(h[1:-1])])
         Rsr = np.array([dz/(λ*β**(i*dz/Z)*_K[i]) for (i,_) in enumerate(h[1:-1])])
         RWU = (h[1:-1] - Ψx)/(Rr + Rsr)
-        return RWU
+        return -RWU
     else:
         return np.zeros_like(h[1:-1])
 
@@ -160,11 +168,11 @@ def lower_boundary_condition(h):
         return h[-1] # Dirichlet
 
 def upper_boundary_condition(h, rain=None):
-    if rain == None:
-        return h[0]
+    if rain == None or rain == 0 or np.isclose(θ(h[0]), θs):
+        return h[1]
     else:
         θ0 = θ(h[0])
-        return invθ(min(max(θdry, θ0 - dt*a1 + dt*a2*rain*(1/θ0)), θs))
+        return invθ(min(max(θdry, θ0 - (θs - θ0)*a1*(dt/1800)*evaporation_rate + (θs - θ0)*a2*(dt/1800)*rain), θs))
 
 def try_run_solver(h, t, Ψx, Cw, timestamp=None):
     try:
@@ -203,7 +211,7 @@ if sol_do_calibration_workflow:
 
         if sol_compute_numerical_probes:
             if t >= current_probe_sp:
-                np_surface_head.append(h[np_probe_depth])
+                np_surface_head_0.append(h[np_probe_depth])
                 if sol_compute_residuals:
                     np_residual_median.append(np.median(residual))
                     np_residual_max.append(np.max(residual))
@@ -215,10 +223,6 @@ if sol_do_calibration_workflow:
     end_time = time()
 
     print(f'>> Computation took {round(end_time - start_time)} s')
-
-    # Safe to remove: the following 2 lines simplify working on the chart without having to execute the full solver.
-    # pd.to_pickle((h, all_h, np_surface_head, np_residual_median, np_residual_max), './data.pkl')
-    # (h, all_h, np_surface_head, np_residual_median, np_residual_max) = pd.read_pickle('./data.pkl')
 
     plt.style.use('bmh')
 
@@ -253,6 +257,7 @@ if sol_do_calibration_workflow:
     ax2.legend()
 
     ax3.set_ylim([Z, 0])
+    ax3.set_xlim([0, 1])
     ax3.set_xlabel('θ $(\\frac{cm^3}{cm^3})$')
     ax3.set_ylabel('z (m)')
     ax3.plot([θs, θs], [z[0], z[-1]], label='Saturation', color='blue', linestyle='--', linewidth=0.5)
@@ -260,16 +265,16 @@ if sol_do_calibration_workflow:
 
     ax4.set_xlabel(f'Time (probing interval = {np_probe_every_s} s)')
     ax4.set_ylabel('Soil moisture $(\\frac{cm^3}{cm^3})$')
-    ax4.set_xlim([0, len(np_surface_head)-1])
+    ax4.set_xlim([0, len(np_surface_head_0)-1])
     ax4.set_ylim([0, 1])
-    ax4.plot(θ(np.array(np_surface_head)), label='Model', linewidth=0.5)
+    ax4.plot(θ(np.array(np_surface_head_0)), label='Model', linewidth=0.5)
     ax4.legend()
 
     ax5.set_xlabel(f'Time (probing interval = {np_probe_every_s} s)')
     ax5.set_yscale('log')
-    ax5.set_ylabel('|Pressure| $(Pa)$')
-    ax5.set_xlim([0, len(np_surface_head)-1])
-    ax5.plot(np.abs(np.array(np_surface_head)), label='Model', linewidth=0.5)
+    ax5.set_ylabel('$|h| \\, (m)$')
+    ax5.set_xlim([0, len(np_surface_head_0)-1])
+    ax5.plot(np.abs(np.array(np_surface_head_0)), label='Model', linewidth=0.5)
     ax5.legend()
 
     ax6.set_yscale('log')
@@ -291,7 +296,7 @@ else:
     ds_rain = data['Rain(mm)'].values.copy()
     ds_soil_moisture = data['Soil moisture (cm3/cm3)'].values.copy()
     ds_sapflow = data['Total Flow(cm3/h)'].values.copy()
-    ds_Ψx = data['Water Potential (MPa)'].values*1e6
+    ds_Ψx = (data['Water Potential (MPa)'].values*1e6)/(100*ρ*g)
 
     h = h0.copy()
     int_rwu = 0
@@ -316,12 +321,19 @@ else:
             h = try_run_solver(hm, t, m_Ψx, Cw((hi + hm)/2))
 
             if t >= current_probe_sp:
-                np_surface_head.append(h[np_probe_depth])
+                np_surface_head_0.append(h[0])
+                np_surface_head_5.append(h[5])
+                np_surface_head_10.append(h[10])
+                np_surface_head_20.append(h[20])
                 current_probe_sp += np_probe_every_s
 
             int_rwu += np.abs(np.sum(compute_RWU(h, m_Ψx, timestamp)))
             t += dt
-        np_RWU.append(int_rwu)
+
+        # if int_rwu != 0:
+        #     print(f'>> RWU: {round(int_rwu, 5)}')
+
+        np_RWU.append(int_rwu*200)
         np_dΨx.append(last_Ψx - m_Ψx)
         last_Ψx = m_Ψx
 
@@ -329,40 +341,49 @@ else:
     print(f'>> Computation took {round((end_time - start_time)/round(ds_rain.shape[0]), 2)} seconds per 30 minutes-clock')
     print(f'>> Total simulation time: {round(end_time - start_time)} s')
 
-    # pd.to_pickle((np_surface_head, np_RWU), './data.pkl')
-    # (np_surface_head, np_RWU) = pd.read_pickle('./data.pkl')
+    extended_domain = pd.to_datetime(np.linspace(from_date.value, to_date.value, len(np_surface_head_0)))
 
-    extended_domain = pd.to_datetime(np.linspace(from_date.value, to_date.value, len(np_surface_head)))
+    plt.style.use('ggplot')
 
-    fig, (ax1, ax2, ax3) = plt.subplots(3,1, figsize=(13,6), sharex=True)
+    fig, (ax1, ax2, ax3, ax4) = plt.subplots(4,1, figsize=(13,8), sharex=True)
     fig.suptitle(f'Infiltration model - {from_date} to {to_date}')
 
-    ax1.set_ylim([θr, θs])
-    # ax1.set_ylim([0, 0.2])
-    # ax1.set_yscale('log')
-    ax1.set_ylabel('$\\theta (\\frac{cm^3}{cm^3})$')
-    ax1.plot(ds_domain, ds_soil_moisture, linewidth=0.5, label='Measurement')
-    ax1.plot(extended_domain, θ(np.array(np_surface_head)), linewidth=0.5, label='Model')
+    # ax1.set_ylim([θr, θs])
+    ax1.set_ylabel('Rain $(mm)$')
+    ax1.plot(ds_domain, ds_rain, linewidth=0.5, label='Precipitation, (Meas.)')
     ax1.grid()
     ax1.legend()
 
-    # ax2.set_yscale('log')
-    ax2.set_ylabel('Volumetric flow $(\\frac{cm^3}{h})$')
-    ax2.set_xlim([from_date, to_date])
-    # ax2.set_ylim([0, 10000])
-    ax2.plot(ds_domain, ds_sapflow, linewidth=0.5, label='Sapflow (Measurement)')
-    ax2.plot(ds_domain, np.array(np_RWU), linewidth=0.5, label='RWU (Model)')
-    # ax2.plot(ds_domain, np.array(np_RWU) - np.array(np_dΨx)*C, linewidth=0.5, label='Sapflow (Model)')
+    ax2.set_ylim([θr, θs])
+    ax2.set_ylabel('$\\theta \\, (\\frac{cm^3}{cm^3})$')
+    ax2.plot(ds_domain, ds_soil_moisture, linewidth=0.5, label='$\\theta_{z=0}$, (Meas.)')
+    ax2.plot(extended_domain, θ(np.array(np_surface_head_0)), linewidth=0.5, label='$\\theta_{z=0}$ (Model)')
+    ax2.plot(extended_domain, θ(np.array(np_surface_head_5)), linewidth=0.5, label='$\\theta_{z=5*dz}$ (Model)')
+    ax2.plot(extended_domain, θ(np.array(np_surface_head_10)), linewidth=0.5, label='$\\theta_{z=10*dz}$ (Model)')
+    ax2.plot(extended_domain, θ(np.array(np_surface_head_20)), linewidth=0.5, label='$\\theta_{z=20*dz}$ (Model)')
     ax2.grid()
     ax2.legend()
 
-    ax3.set_yscale('log')
-    ax3.set_ylabel('|Pressure| $(Pa)$')
+    # ax3.set_yscale('log')
+    ax3.set_ylabel('Volumetric flow $(\\frac{cm^3}{h})$')
     ax3.set_xlim([from_date, to_date])
-    ax3.plot(ds_domain, np.abs(ds_Ψx), linewidth=0.5, label='Ψx (Measurement)')
-    ax3.plot(extended_domain, np.abs(np.array(np_surface_head)), linewidth=0.5, label='h (Model)')
+    # ax3.set_ylim([0, 10000])
+    ax3.plot(ds_domain, ds_sapflow, linewidth=0.5, label='Sapflow (Meas.)')
+    ax3.plot(ds_domain, np.array(np_RWU), linewidth=0.5, label='RWU (Model)')
+    # ax3.plot(ds_domain, np.array(np_RWU) - np.array(np_dΨx)*C, linewidth=0.5, label='Sapflow (Model)')
     ax3.grid()
     ax3.legend()
+
+    # ax4.set_yscale('log')
+    ax4.set_ylabel('$|\\psi_x\\frac{1}{\\rho g}|, |h| (m)$')
+    ax4.set_xlim([from_date, to_date])
+    ax4.plot(ds_domain, np.abs(ds_Ψx), linewidth=0.5, label='$\\psi_x$, (Meas.)')
+    ax4.plot(extended_domain, np.abs(np.array(np_surface_head_0)), linewidth=0.5, label='$h_{z=0}$ (Model)')
+    ax4.plot(extended_domain, np.abs(np.array(np_surface_head_5)), linewidth=0.5, label='$h_{z=5*dz}$ (Model)')
+    ax4.plot(extended_domain, np.abs(np.array(np_surface_head_10)), linewidth=0.5, label='$h_{z=10*dz}$ (Model)')
+    ax4.plot(extended_domain, np.abs(np.array(np_surface_head_20)), linewidth=0.5, label='$h_{z=20*dz}$ (Model)')
+    ax4.grid()
+    ax4.legend()
 
     plt.tight_layout()
     plt.savefig(f'richards_with_data.png')

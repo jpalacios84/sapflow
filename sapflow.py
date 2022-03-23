@@ -30,12 +30,12 @@ def invθ(θ): # h
 
 # Solver settings
 # ---------------
-sol_do_calibration_workflow = False
+sol_do_calibration_workflow = True
 sol_compute_residuals = True
 sol_compute_numerical_probes = True
 sol_datafile = './field_measurements/DF27_period1.csv'
 
-sol_use_RWU = True
+sol_use_RWU = False
 RWU_start_hour = 8
 RWU_end_hour = 23
 sol_use_free_drainage_bc = False # Soil physics with Hydrus ~pp190
@@ -59,7 +59,7 @@ Z = 200/1000
 ρ = 1000 # kg/m3
 g = 9.81 # m/s2
 τ0 = 0
-τ = 3600*24 # total time of simulation *24 is a whole day
+τ = 3600*1 # total time of simulation *24 is a whole day
 t_checkpoints = [n*τ/8 for n in range(8+1)]
 dt = 0.75
 dz = Z/100
@@ -72,7 +72,9 @@ a2 = 1 # Rain factor units
 
 # Initial conditions
 h0 = np.zeros(Nz+2)
-h0[:] = invθ(0.4)
+h0[0] = invθ(θdry)
+h0[1:-1] = invθ(0.2)
+h0[-1] = invθ(0.4)
 
 # Root water uptake
 # -----------------
@@ -130,7 +132,7 @@ def compute_RWU(h, Ψx, timestamp):
         Rr = np.array([Rp/(λ*β**(i*dz/Z)) for (i,_) in enumerate(h[1:-1])])
         Rsr = np.array([dz/(λ*β**(i*dz/Z)*_K[i]) for (i,_) in enumerate(h[1:-1])])
         RWU = (h[1:-1] - Ψx)/(Rr + Rsr)
-        return -RWU
+        return RWU
     else:
         return np.zeros_like(h[1:-1])
 
@@ -169,7 +171,7 @@ def lower_boundary_condition(h):
 
 def upper_boundary_condition(h, rain=None):
     if rain == None or rain == 0 or np.isclose(θ(h[0]), θs):
-        return h[1]
+        return h[0]
     else:
         θ0 = θ(h[0])
         return invθ(min(max(θdry, θ0 - (θs - θ0)*a1*(dt/1800)*evaporation_rate + (θs - θ0)*a2*(dt/1800)*rain), θs))

@@ -30,15 +30,15 @@ def invθ(θ): # h
 
 # Solver settings
 # ---------------
-sol_do_calibration_workflow = True
+sol_do_calibration_workflow = False
 sol_compute_residuals = True
 sol_compute_numerical_probes = True
-sol_datafile = './field_measurements/DF27_period1.csv'
+sol_datafile = './field_measurements/DF27_period1_single_day.csv'
 
-sol_use_RWU = False
+sol_use_RWU = True
 RWU_start_hour = 8
 RWU_end_hour = 23
-sol_use_free_drainage_bc = False # Soil physics with Hydrus ~pp190
+sol_use_free_drainage_bc = True # Soil physics with Hydrus ~pp190
 
 # Simulation parameters
 # ---------------------
@@ -53,8 +53,8 @@ l = 1
 # Empirical observations on the numerial value of Ks
 # 1e-3 -- Extremely quick infiltration
 # 1e-6 -- Clay-like infiltration
-Ks = 5e-6
-α = -0.99
+Ks = 1e-5
+α = -1
 Z = 200/1000
 ρ = 1000 # kg/m3
 g = 9.81 # m/s2
@@ -72,15 +72,14 @@ a2 = 1 # Rain factor units
 
 # Initial conditions
 h0 = np.zeros(Nz+2)
-h0[0] = invθ(θdry)
-h0[1:-1] = invθ(0.2)
-h0[-1] = invθ(0.4)
+h0[0] = invθ(0.4)
+h0[1:-1] = invθ(0.1)
 
 # Root water uptake
 # -----------------
 Ψx = -1e6
 β = 0.01
-Rmin = 1
+Rmin = 1e4
 d = 1e6
 Brwu = 0.74
 C = 1e-6

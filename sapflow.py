@@ -30,12 +30,12 @@ def invθ(θ): # h
 
 # Solver settings
 # ---------------
-sol_do_calibration_workflow = True
+sol_do_calibration_workflow = False
 sol_compute_residuals = True
 sol_compute_numerical_probes = True
 sol_datafile = './field_measurements/DF27_period1_single_day.csv'
 
-sol_use_RWU = False
+sol_use_RWU = True
 RWU_start_hour = 8
 RWU_end_hour = 23
 sol_use_free_drainage_bc = True # Soil physics with Hydrus ~pp190
@@ -79,7 +79,7 @@ h0[1:-1] = invθ(0.2)
 # -----------------
 Ψx = -1e6
 β = 0.01
-Rmin = 1e4
+Rmin = 1e2 #1e4
 d = 1e6
 Brwu = 0.74
 C = 1e-6
@@ -129,7 +129,7 @@ def compute_RWU(h, Ψx, timestamp):
         Rp = Rmin*np.exp((-Ψx/d)**Brwu)
         λ = 1/(sum([β**(i*dz/Z) for (i,_) in enumerate(h[1:-1])]))
         Rr = np.array([Rp/(λ*β**(i*dz/Z)) for (i,_) in enumerate(h[1:-1])])
-        Rsr = np.array([dz/(λ*β**(i*dz/Z)*_K[i]) for (i,_) in enumerate(h[1:-1])])
+        Rsr = np.array([dz/(λ*β**(i*dz/Z)*(_K[i]*3600*24)) for (i,_) in enumerate(h[1:-1])])
         RWU = (h[1:-1] - Ψx)/(Rr + Rsr)
         return RWU
     else:
@@ -334,7 +334,7 @@ else:
         # if int_rwu != 0:
         #     print(f'>> RWU: {round(int_rwu, 5)}')
 
-        np_RWU.append(int_rwu*200)
+        np_RWU.append(int_rwu*25) #25 is to convert m/d to cm/h and multiplied by SWA of 27 this will depend on each tree
         np_dΨx.append(last_Ψx - m_Ψx)
         last_Ψx = m_Ψx
 
@@ -370,7 +370,7 @@ else:
     ax3.set_xlim([from_date, to_date])
     # ax3.set_ylim([0, 10000])
     ax3.plot(ds_domain, ds_sapflow, linewidth=0.5, label='Sapflow (Meas.)')
-    ax3.plot(ds_domain, np.array(np_RWU)*50, linewidth=0.5, label='RWU (Model)')
+    ax3.plot(ds_domain, np.array(np_RWU), linewidth=0.5, label='RWU (Model)') #np.array(np_RWU)*50
     # ax3.plot(ds_domain, np.array(np_RWU) - np.array(np_dΨx)*C, linewidth=0.5, label='Sapflow (Model)')
     ax3.grid()
     ax3.legend()

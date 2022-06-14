@@ -52,8 +52,8 @@ n  = 1/(1 - m)
 l = 1
 # Empirical observations on the numerial value of Ks
 # 1e-3 -- Extremely quick infiltration
-# 1e-6 -- Clay-like infiltration
-Ks = 1e-5
+# 1e-5 -- Clay-like infiltration
+Ks = 1e-4 #cm/s *100 m/s
 α = -1
 Z = 200/1000 # m 
 ρ = 1000 # kg/m3
@@ -72,15 +72,15 @@ a2 = 1 # Rain factor units
 
 # Initial conditions
 h0 = np.zeros(Nz+2)
-h0[0] = invθ(0.5)
-h0[1:-1] = invθ(0.2)
+#h0[0] = invθ(0.5)
+h0[:] = invθ(0.2)
 
 # Root water uptake
 # -----------------
-Ψx = -1e6
+Ψx = -1
 β = 0.01
 Rmin = 1e2 #1e4
-d = 1e6
+d = 1 #1e6
 Brwu = 0.74
 C = 1e-6
 
@@ -130,7 +130,7 @@ def compute_RWU(h, Ψx, timestamp):
         λ = 1/(sum([β**(i*dz/Z) for (i,_) in enumerate(h[1:-1])]))
         Rr = np.array([Rp/(λ*β**(i*dz/Z)) for (i,_) in enumerate(h[1:-1])])
         Rsr = np.array([dz/(λ*β**(i*dz/Z)*(_K[i]*3600*24)) for (i,_) in enumerate(h[1:-1])])
-        RWU = (h[1:-1] - Ψx)/(Rr + Rsr)
+        RWU = (h[1:-1] - Ψx)/(Rr + Rsr)  #m/d
         return RWU
     else:
         return np.zeros_like(h[1:-1])
@@ -173,7 +173,7 @@ def upper_boundary_condition(h, rain=None):
         return h[0]
     else:
         θ0 = θ(h[0])
-        return invθ(min(max(θdry, θ0 - (θs - θ0)*a1*(dt/1800)*evaporation_rate + (θs - θ0)*a2*(dt/1800)*rain), θs))
+        return invθ(min(max(θdry, θ0 - (θs - θ0)*a1*(dt/1800)*evaporation_rate + (θs - θ0)*a2*(dt/1800)*rain), θs)) ###
 
 def try_run_solver(h, t, Ψx, Cw, timestamp=None):
     try:
@@ -297,7 +297,7 @@ else:
     ds_rain = data['Rain(mm)'].values.copy()
     ds_soil_moisture = data['Soil moisture (cm3/cm3)'].values.copy()
     ds_sapflow = data['Total Flow(cm3/h)'].values.copy()
-    ds_Ψx = (data['Water Potential (MPa)'].values*1e6)/(100*ρ*g)
+    ds_Ψx = (data['Water Potential (MPa)'].values*1e6)/(ρ*g)
 
     h = h0.copy()
     int_rwu = 0
@@ -334,7 +334,7 @@ else:
         # if int_rwu != 0:
         #     print(f'>> RWU: {round(int_rwu, 5)}')
 
-        np_RWU.append(int_rwu*25) #25 is to convert m/d to cm/h and multiplied by SWA of 27 this will depend on each tree
+        np_RWU.append(int_rwu*25) #25 is to convert m/d to cm/h and multiplied by SWA 60 cm2 of 27 this will depend on each tree
         np_dΨx.append(last_Ψx - m_Ψx)
         last_Ψx = m_Ψx
 
@@ -376,9 +376,9 @@ else:
     ax3.legend()
 
     # ax4.set_yscale('log')
-    ax4.set_ylabel('$|\\psi_x\\frac{1}{\\rho g}|, |h| (m)$')
+    ax4.set_ylabel('$|h|(m)$')
     ax4.set_xlim([from_date, to_date])
-    ax4.plot(ds_domain, np.abs(ds_Ψx), linewidth=0.5, label='$\\psi_x$, (Meas.)')
+#    ax4.plot(ds_domain, np.abs(ds_Ψx), linewidth=0.5, label='$\\psi_x$, (Meas.)')
     ax4.plot(extended_domain, np.abs(np.array(np_surface_head_0)), linewidth=0.5, label='$h_{z=0}$ (Model)')
     ax4.plot(extended_domain, np.abs(np.array(np_surface_head_5)), linewidth=0.5, label='$h_{z=5*dz}$ (Model)')
     ax4.plot(extended_domain, np.abs(np.array(np_surface_head_10)), linewidth=0.5, label='$h_{z=10*dz}$ (Model)')

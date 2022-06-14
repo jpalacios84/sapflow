@@ -79,8 +79,8 @@ h0[:] = invθ(0.2)
 # -----------------
 Ψx = -1
 β = 0.01
-Rmin = 1e2 #1e4
-d = 1 #1e6
+Rmin = 1e4 #1e4
+d = 1e2 #1e6
 Brwu = 0.74
 C = 1e-6
 
@@ -129,7 +129,7 @@ def compute_RWU(h, Ψx, timestamp):
         Rp = Rmin*np.exp((-Ψx/d)**Brwu)
         λ = 1/(sum([β**(i*dz/Z) for (i,_) in enumerate(h[1:-1])]))
         Rr = np.array([Rp/(λ*β**(i*dz/Z)) for (i,_) in enumerate(h[1:-1])])
-        Rsr = np.array([dz/(λ*β**(i*dz/Z)*(_K[i]*3600*24)) for (i,_) in enumerate(h[1:-1])])
+        Rsr = np.array([dz/(λ*β**(i*dz/Z)*(_K[i]*0.1*3600*24)) for (i,_) in enumerate(h[1:-1])])
         RWU = (h[1:-1] - Ψx)/(Rr + Rsr)  #m/d
         return RWU
     else:
@@ -334,7 +334,7 @@ else:
         # if int_rwu != 0:
         #     print(f'>> RWU: {round(int_rwu, 5)}')
 
-        np_RWU.append(int_rwu*25) #25 is to convert m/d to cm/h and multiplied by SWA 60 cm2 of 27 this will depend on each tree
+        np_RWU.append(int_rwu*500) #25 is to convert m/d to cm/h and multiplied by SWA 60 cm2 of 27 this will depend on each tree
         np_dΨx.append(last_Ψx - m_Ψx)
         last_Ψx = m_Ψx
 

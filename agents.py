@@ -60,10 +60,10 @@ for k in ['crack', 'plant']:
 
 ax.set_xlim([0, S_IN_DAY])
 ax.set_ylim([0, 3])
-ax.grid()
+#ax.grid()
 ax.legend()
 ax.set_xlabel('Time (s)')
-ax.set_ylabel('Volume (l)')
+ax.set_ylabel('Volume (L)')
 
 plt.tight_layout()
 plt.show()

@@ -53,13 +53,13 @@ l = 1
 # Empirical observations on the numerial value of Ks
 # 1e-3 -- Extremely quick infiltration
 # 1e-5 -- Clay-like infiltration
-Ks = 1e-4 #cm/s *100 m/s
+Ks = 1e-6 #cm/s *100 m/s
 α = -1
 Z = 200/1000 # m 
 ρ = 1000 # kg/m3
 g = 9.81 # m/s2
 τ0 = 0
-τ = 3600*0.20 # total time of simulation *24 is a whole day
+τ = 3600*1 # total time of simulation *24 is a whole day
 t_checkpoints = [n*τ/8 for n in range(8+1)]
 dt = 0.75
 dz = Z/100
@@ -73,7 +73,7 @@ a2 = 1 # Rain factor units
 # Initial conditions
 h0 = np.zeros(Nz+2)
 #h0[0] = invθ(0.5)
-h0[:] = invθ(0.2)
+h0[:] = invθ(0.18)
 
 # Root water uptake
 # -----------------
@@ -334,7 +334,7 @@ else:
         # if int_rwu != 0:
         #     print(f'>> RWU: {round(int_rwu, 5)}')
 
-        np_RWU.append(int_rwu*500) #25 is to convert m/d to cm/h and multiplied by SWA 60 cm2 of 27 this will depend on each tree
+        np_RWU.append(int_rwu*25) #25 is to convert m/d to cm/h and multiplied by SWA 60 cm2 of 27 this will depend on each tree
         np_dΨx.append(last_Ψx - m_Ψx)
         last_Ψx = m_Ψx
 

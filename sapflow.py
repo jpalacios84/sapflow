@@ -33,7 +33,7 @@ def invθ(θ): # h
 sol_do_calibration_workflow = False
 sol_compute_residuals = True
 sol_compute_numerical_probes = True
-sol_datafile = './field_measurements/DF27_period1_single_day.csv'
+sol_datafile = './field_measurements/DF27_period1_four_days.csv'
 
 sol_use_RWU = True
 RWU_start_hour = 8
@@ -51,13 +51,14 @@ n  = 1/(1 - m)
 #m = 1-(1/n)
 l = 1
 # Empirical observations on the numerial value of Ks
-# 1e-3 -- Extremely quick infiltration
-# 1e-5 -- Clay-like infiltration
+# 1e-4 -- Extremely quick infiltration
+# 1e-8 -- Clay-like infiltration
 Ks = 1e-5 # m/s
-α = -1e-4 #original as 1 
+
 Z = 200/1000 # m 
 ρ = 1000 # kg/m3
 g = 9.81 # m/s2
+α = ((-1e-4)*1e6)/(ρ*g) #original as 1 1/MPa 1/m
 τ0 = 0
 τ = 3600*1 # total time of simulation *24 is a whole day
 t_checkpoints = [n*τ/8 for n in range(8+1)]
@@ -72,15 +73,15 @@ a2 = 1 # Rain factor units
 
 # Initial conditions
 h0 = np.zeros(Nz+2)
-#h0[0] = invθ(0.5)
-h0[:] = invθ(0.18)
-
+#h0[0] = invθ(0.4)
+h0[:(Nz+2)//2] = invθ(0.4)
+h0[(Nz+2)//2:] = invθ(0.05)
 # Root water uptake
 # -----------------
 Ψx = -1
 β = 0.01
-Rmin = 100 #1e4
-d = 2.5 #MPa to m 10^6/(9.8*1000)=102.04~100
+Rmin = 1e4 #1e4
+d = (1*1e6)/(ρ*g) #MPa ?? m 
 Brwu = 0.74
 C = 1e-6
 
@@ -173,6 +174,7 @@ def upper_boundary_condition(h, rain=None):
         return h[0]
     else:
         θ0 = θ(h[0])
+        #return(h[0])
         return invθ(min(max(θdry, θ0 - (θs - θ0)*a1*(dt/1800)*evaporation_rate + (θs - θ0)*a2*(dt/1800)*rain), θs)) ###
 
 def try_run_solver(h, t, Ψx, Cw, timestamp=None):
@@ -252,6 +254,8 @@ if sol_do_calibration_workflow:
         ax3.plot(θ(h[1:-1]), z, label=f'{round(t_checkpoints[i]/3600,1)} hr', linewidth=0.5)
 
     ax2.set_ylim([Z, 0])
+    print(ax2.get_xlim())
+ #   ax2.set_xlim([0, 1])
     ax2.set_xscale('log')
     ax2.set_xlabel('|h| (m)')
     ax2.set_ylabel('z (m)')

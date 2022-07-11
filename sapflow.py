@@ -67,7 +67,7 @@ dz = Z/100
 Nz = int(Z/dz) # grid cell count
 
 # Surface boundary conditions parameters
-evaporation_rate = 0
+evaporation_rate = 1
 a1 = 100 # Evaporation factor units
 a2 = 1 # Rain factor units
 

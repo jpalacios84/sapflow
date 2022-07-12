@@ -175,7 +175,7 @@ def upper_boundary_condition(h, rain=None):
     else:
         θ0 = θ(h[0])
         #return(h[0])
-        return invθ(min(max(θdry, θ0 - (θs - θ0)*a1*(dt/1800)*evaporation_rate + (θs - θ0)*a2*(dt/1800)*rain), θs)) ###
+        return invθ(min(max(θdry, θ0 - (θs - θ0)*a1*(dt)*(evaporation_rate/1800) + (θs - θ0)*a2*(dt)*(rain/1800)), θs)) ###
 
 def try_run_solver(h, t, Ψx, Cw, timestamp=None):
     try:

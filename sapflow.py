@@ -33,7 +33,7 @@ def invθ(θ): # h
 sol_do_calibration_workflow = False
 sol_compute_residuals = True
 sol_compute_numerical_probes = True
-sol_datafile = './field_measurements/DF27_period1_four_days.csv'
+sol_datafile = './field_measurements/DF27_period1_single_day.csv'
 
 sol_use_RWU = True
 RWU_start_hour = 8
@@ -67,19 +67,20 @@ dz = Z/100
 Nz = int(Z/dz) # grid cell count
 
 # Surface boundary conditions parameters
-evaporation_rate = 1
-a1 = 100 # Evaporation factor units
-a2 = 1 # Rain factor units
+#evaporation_rate = 1
+a1 = 0.01 # Evaporation factor units
+a2 = 0.001 #0.002 Rain factor units
 
 # Initial conditions
 h0 = np.zeros(Nz+2)
 #h0[0] = invθ(0.4)
-h0[:(Nz+2)//2] = invθ(0.4)
-h0[(Nz+2)//2:] = invθ(0.05)
+#h0[:(Nz+2)//2] = invθ(0.18)
+#h0[(Nz+2)//2:] = invθ(0.05)
+h0[:]=invθ(0.2)
 # Root water uptake
 # -----------------
 Ψx = -1
-β = 0.01
+β = 0.02#0.01
 Rmin = 1e4 #1e4
 d = (1*1e6)/(ρ*g) #MPa ?? m 
 Brwu = 0.74
@@ -152,7 +153,7 @@ def create_coeff_matrix(h, Cw):
     diag_main = np.zeros(Nz+2)
     diag_sup = np.zeros(Nz+2)
     diag_low = np.zeros(Nz+2)
-    for i in range(1,Nz+1):
+    for i in range(1,Nz+1):        
         diag_main[i]  = 1 + A[i-1] + B[i-1]
         diag_sup[i]   = -A[i-1]
         diag_low[i-1] = -B[i-1]
@@ -169,13 +170,13 @@ def lower_boundary_condition(h):
     else:
         return h[-1] # Dirichlet
 
-def upper_boundary_condition(h, rain=None):
+def upper_boundary_condition(h, rain=None, pet=None):
     if rain == None or rain == 0 or np.isclose(θ(h[0]), θs):
         return h[0]
     else:
         θ0 = θ(h[0])
         #return(h[0])
-        return invθ(min(max(θdry, θ0 - (θs - θ0)*a1*(dt)*(evaporation_rate/1800) + (θs - θ0)*a2*(dt)*(rain/1800)), θs)) ###
+        return invθ(min(max(θdry, θ0 - (θs - θ0)*a1*(dt)*(pet*1000/1800) + (θs - θ0)*a2*(dt)*(rain*1000/1800)), θs)) ###(θs - θ0)
 
 def try_run_solver(h, t, Ψx, Cw, timestamp=None):
     try:
@@ -302,6 +303,7 @@ else:
     ds_soil_moisture = data['Soil moisture (cm3/cm3)'].values.copy()
     ds_sapflow = data['Total Flow(cm3/h)'].values.copy()
     ds_Ψx = (data['Water Potential (MPa)'].values*1e6)/(ρ*g)
+    ds_PET=data['PET1(mm/h)'].values.copy()*0.5 #mm/h * 0.5 h (half an hour data) units mm 
 
     h = h0.copy()
     int_rwu = 0
@@ -309,19 +311,22 @@ else:
     print(f'>> Running full model with input file {sol_datafile}')
     print(f'>> Simulating {round(ds_rain.shape[0]/2)} hours-clock')
     start_time = time()
-    for i,(timestamp, rain, m_Ψx) in enumerate(zip(ds_domain, ds_rain, ds_Ψx)): #!!
+    for i,(timestamp, rain, m_Ψx, pet) in enumerate(zip(ds_domain, ds_rain, ds_Ψx, ds_PET)): #!!
         print(f'[{round(100*i/ds_rain.shape[0])}%] Timestamp: {timestamp}, Rain (mm): {rain}')
         t = 0
         τ = 3600/2
         current_probe_sp = 0
         int_rwu = 0
+
         while t <= τ:
+ #           if t == (377*0.75): 
+ #               x_ = Cw(h)
             hm = h.copy()
-            hm[0] = upper_boundary_condition(hm, rain)
+            hm[0] = upper_boundary_condition(hm, rain, pet)
             hm[-1] = lower_boundary_condition(hm)
 
             hi = try_run_solver(hm, t, m_Ψx, Cw(h))
-            hi[0] = upper_boundary_condition(hi, rain)
+            hi[0] = upper_boundary_condition(hi, rain, pet)
             hi[-1] = lower_boundary_condition(hi)
             h = try_run_solver(hm, t, m_Ψx, Cw((hi + hm)/2))
 

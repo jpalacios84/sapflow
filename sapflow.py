@@ -33,7 +33,7 @@ def invθ(θ): # h
 sol_do_calibration_workflow = False
 sol_compute_residuals = True
 sol_compute_numerical_probes = True
-sol_datafile = './field_measurements/DF27_period1_single_day.csv'
+sol_datafile = './field_measurements/DF27_period1_four_days.csv'
 
 sol_use_RWU = True
 RWU_start_hour = 8
@@ -69,7 +69,7 @@ Nz = int(Z/dz) # grid cell count
 # Surface boundary conditions parameters
 #evaporation_rate = 1
 a1 = 0.01 # Evaporation factor units
-a2 = 0.001 #0.002 Rain factor units
+a2 = 0.0009 #0.002 Rain factor units
 
 # Initial conditions
 h0 = np.zeros(Nz+2)

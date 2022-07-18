@@ -33,7 +33,7 @@ def invθ(θ): # h
 sol_do_calibration_workflow = False
 sol_compute_residuals = True
 sol_compute_numerical_probes = True
-sol_datafile = './field_measurements/DF27_period1_four_days.csv'
+sol_datafile = './field_measurements/DF27_period1_single_day.csv'
 
 sol_use_RWU = True
 RWU_start_hour = 8
@@ -53,12 +53,13 @@ l = 1
 # Empirical observations on the numerial value of Ks
 # 1e-4 -- Extremely quick infiltration
 # 1e-8 -- Clay-like infiltration
-Ks = 1e-5 # m/s
+
+Ks = 1e-5 # m/s 1e-5
 
 Z = 200/1000 # m 
 ρ = 1000 # kg/m3
 g = 9.81 # m/s2
-α = ((-1e-4)*1e6)/(ρ*g) #original as 1 1/MPa 1/m
+α = -1e-3#)*1e6)/(ρ*g) #original as 1 1/MPa 1/m (e-4 or e -3)
 τ0 = 0
 τ = 3600*1 # total time of simulation *24 is a whole day
 t_checkpoints = [n*τ/8 for n in range(8+1)]
@@ -68,20 +69,20 @@ Nz = int(Z/dz) # grid cell count
 
 # Surface boundary conditions parameters
 #evaporation_rate = 1
-a1 = 0.01 # Evaporation factor units
-a2 = 0.0009 #0.002 Rain factor units
+a1 = 0.0001 # Evaporation factor units
+a2 = 0.0001 #0.002 Rain factor units
 
 # Initial conditions
 h0 = np.zeros(Nz+2)
 #h0[0] = invθ(0.4)
 #h0[:(Nz+2)//2] = invθ(0.18)
 #h0[(Nz+2)//2:] = invθ(0.05)
-h0[:]=invθ(0.2)
+h0[:]=invθ(0.18)
 # Root water uptake
 # -----------------
 Ψx = -1
 β = 0.02#0.01
-Rmin = 1e4 #1e4
+Rmin = 1e6 #1e4
 d = (1*1e6)/(ρ*g) #MPa ?? m 
 Brwu = 0.74
 C = 1e-6
@@ -172,11 +173,13 @@ def lower_boundary_condition(h):
 
 def upper_boundary_condition(h, rain=None, pet=None):
     if rain == None or rain == 0 or np.isclose(θ(h[0]), θs):
-        return h[0]
+        #return h[0]
+        θ0 = θ(h[0])
+        return invθ(min(max(θdry, θ0 - (θs - θ0)*a1*(dt)*(pet*1000/1800)), θs))
     else:
         θ0 = θ(h[0])
         #return(h[0])
-        return invθ(min(max(θdry, θ0 - (θs - θ0)*a1*(dt)*(pet*1000/1800) + (θs - θ0)*a2*(dt)*(rain*1000/1800)), θs)) ###(θs - θ0)
+        return invθ(min(max(θdry, θ0 + (θs - θ0)*a2*(dt)*(rain*1000/1800)), θs)) ###(θs - θ0)
 
 def try_run_solver(h, t, Ψx, Cw, timestamp=None):
     try:
@@ -302,7 +305,7 @@ else:
     ds_rain = data['Rain(mm)'].values.copy()
     ds_soil_moisture = data['Soil moisture (cm3/cm3)'].values.copy()
     ds_sapflow = data['Total Flow(cm3/h)'].values.copy()
-    ds_Ψx = (data['Water Potential (MPa)'].values*1e6)/(ρ*g)
+    ds_Ψx = (data['Water Potential (MPa)'].values*1e6)/(ρ*g) #m
     ds_PET=data['PET1(mm/h)'].values.copy()*0.5 #mm/h * 0.5 h (half an hour data) units mm 
 
     h = h0.copy()

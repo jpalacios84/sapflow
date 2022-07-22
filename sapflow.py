@@ -36,7 +36,7 @@ sol_compute_numerical_probes = True
 sol_datafile = './field_measurements/DF27_period1_single_day.csv'
 
 sol_use_RWU = True
-RWU_start_hour = 8
+RWU_start_hour = 0
 RWU_end_hour = 23
 sol_use_free_drainage_bc = True # Soil physics with Hydrus ~pp190
 
@@ -82,7 +82,7 @@ h0[:]=invθ(0.18)
 # -----------------
 Ψx = -1
 β = 0.02#0.01
-Rmin = 1e6 #1e4
+Rmin = 1e6 #1e6 1e4 for paper
 d = (1*1e6)/(ρ*g) #MPa ?? m 
 Brwu = 0.74
 C = 1e-6

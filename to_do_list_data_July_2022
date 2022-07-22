@@ -1,0 +1,33 @@
+1) make a DF with the isotope data and the precipitation averages with the dates of the isotopes
+
+	-tuple with soil/plant, water and precipitation 
+	
+	-read isotope data for soil and plant and make an index 
+	-read isotope data for water and make an index 
+	-import environmental/precip file and make index 
+	
+	TASK Precipitation 
+	-cut precipitation file only from May 1 to August 31
+	-get average precipitation by month of all non zero rain events 
+	-repeat them in a column may avg_precip 
+
+	TASK Precipitation+water 
+	-merge precipitation and water isotope dfs into DF_weighted through date 
+	-get average precipitation by month of all non zero rain events 
+	-get average precipitation of non zero rain events of each period: 
+		-for 1st gutter value take from may 1 to row date_isotope_gutter(11-may-2021) at 17:00
+		-for next values take rowdatetime_precipfile[+30 mins] until (date_isotope_gutter+1) at 17:00
+	-append in a list: date without time/col1=avgprecip_between_dates/col2=avgprecip_total_month (size should be same no of rows as water_isotope and 3 columns 
+	-dH_weighted=(dHcol*avgprecip_between_dates)/avgprecip_total_month
+	-dO_weighted=(dOcol*avgprecip_between_dates)/avgprecip_total_month
+	
+	TASK Precipitation+Soil/plant 
+	-merge precipitation and plant-soil isotope dfs into DF_weighted through date 
+	
+	-multiply dH_weighted=(dHcol*avgprecip_between_dates)/avgprecip_total_month
+	- dO_weighted=(dOcol*avgprecip_between_dates)/avgprecip_total_month
+2) try to make some correlation from the potential and sf data 
+3) Put notes in order/ change code for new changes in instruments 2022 
+4) Radiation (use new data to fill gaps where we have) 
+5) Find out to what dates previous isotopic measurments (2019/2020) correspond to. 
+

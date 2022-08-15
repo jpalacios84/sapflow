@@ -33,7 +33,7 @@ def invθ(θ): # h
 sol_do_calibration_workflow = False
 sol_compute_residuals = True
 sol_compute_numerical_probes = True
-sol_datafile = './field_measurements/ES51_period1_single_day.csv'
+sol_datafile = './field_measurements/ES50_period1_single_day.csv'
 
 sol_use_RWU = True
 RWU_start_hour = 5

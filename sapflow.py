@@ -33,11 +33,11 @@ def invθ(θ): # h
 sol_do_calibration_workflow = False
 sol_compute_residuals = True
 sol_compute_numerical_probes = True
-sol_datafile = './field_measurements/DF27_period1_single_day.csv'
+sol_datafile = './field_measurements/ES51_period1_single_day.csv'
 
 sol_use_RWU = True
-RWU_start_hour = 0
-RWU_end_hour = 23
+RWU_start_hour = 5
+RWU_end_hour = 22
 sol_use_free_drainage_bc = True # Soil physics with Hydrus ~pp190
 
 # Simulation parameters
@@ -78,6 +78,7 @@ h0 = np.zeros(Nz+2)
 #h0[:(Nz+2)//2] = invθ(0.18)
 #h0[(Nz+2)//2:] = invθ(0.05)
 h0[:]=invθ(0.18)
+
 # Root water uptake
 # -----------------
 Ψx = -1

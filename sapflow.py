@@ -1,14 +1,15 @@
-from numba import njit
+import warnings
+from sys import exit
+from time import time
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
+from numba import njit
 from scipy.sparse import diags
 from scipy.sparse.linalg import spsolve
-from sys import exit
 
-import warnings
-from time import time
 warnings.filterwarnings('error')
 
 # Van Genuchten constitutive relations
@@ -45,7 +46,7 @@ sol_use_free_drainage_bc = True # Soil physics with Hydrus ~pp190
 θr = 0.01
 θs = 0.539 # Value for vertical fracture fillings karst (Yang)
 θdry = θr + 0.0001
-gbc = 1 # Constant gradient at lower boundary (L/L)
+gbc = 0.5 # Constant gradient at lower boundary (L/L)
 m  = 0.99
 n  = 1/(1 - m)
 #m = 1-(1/n)

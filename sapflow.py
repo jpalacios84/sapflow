@@ -31,9 +31,9 @@ def invθ(θ): # h
 
 # Solver settings
 # ---------------
-sol_do_calibration_workflow = False
+sol_do_calibration_workflow = True
 sol_compute_residuals = True
-sol_compute_numerical_probes = True
+sol_compute_numerical_probes = False
 sol_datafile = './field_measurements/ES50_period1_single_day.csv'
 
 sol_use_RWU = True

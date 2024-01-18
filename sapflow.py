@@ -36,14 +36,14 @@ sol_compute_residuals = True
 sol_compute_numerical_probes = False
 sol_datafile = './field_measurements/ES50_period1_single_day.csv'
 
-sol_use_RWU = True
+sol_use_RWU = False
 RWU_start_hour = 5
 RWU_end_hour = 22
 sol_use_free_drainage_bc = True # Soil physics with Hydrus ~pp190
 
 # Simulation parameters
 # ---------------------
-θr = 0.01
+θr = 0.091 #0.01
 θs = 0.539 # Value for vertical fracture fillings karst (Yang)
 θdry = θr + 0.0001
 gbc = 0.5 # Constant gradient at lower boundary (L/L)
@@ -177,11 +177,12 @@ def upper_boundary_condition(h, rain=None, pet=None):
     if rain == None or rain == 0 or np.isclose(θ(h[0]), θs):
         #return h[0]
         θ0 = θ(h[0])
-        return invθ(min(max(θdry, θ0 - (θs - θ0)*a1*(dt)*(pet*1000/1800)), θs))
+        return invθ(θ0)
+        # return invθ(min(max(θdry, θ0 - (θs - θ0)*a1*(dt)*(pet*1000/1800)), θs))
     else:
-        θ0 = θ(h[0])
-        #return(h[0])
-        return invθ(min(max(θdry, θ0 + (θs - θ0)*a2*(dt)*(rain*1000/1800)), θs)) ###(θs - θ0)
+        # θ0 = θ(h[0])
+        return(h[0])
+        # return invθ(min(max(θdry, θ0 + (θs - θ0)*a2*(dt)*(rain*1000/1800)), θs)) ###(θs - θ0)
 
 def try_run_solver(h, t, Ψx, Cw, timestamp=None):
     try:

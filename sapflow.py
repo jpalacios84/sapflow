@@ -22,7 +22,7 @@ def K(h):
     return (Ks*(1-(α*h)**(m*n) * (1 + (α*h)**n)**(-m))**2)/(1 + (α*h)**n)**(m*l)
 
 @njit
-def θ(h):
+def θ(h): 
     return θr + (θs - θr)/(1 + (α*h)**n)**m
 
 @njit
@@ -88,6 +88,7 @@ Rmin = 1e6 #1e6 1e4 for paper
 d = (1*1e6)/(ρ*g) #MPa ?? m 
 Brwu = 0.74
 C = 1e-6
+dx = 0.01 #m   10 mm path from bulk soil to root should be a range and they calibrate it in v-SPAC
 
 # Numerical probes
 # ----------------
@@ -134,7 +135,7 @@ def compute_RWU(h, Ψx, timestamp):
         Rp = Rmin*np.exp((-Ψx/d)**Brwu)
         λ = 1/(sum([β**(i*dz/Z) for (i,_) in enumerate(h[1:-1])]))
         Rr = np.array([Rp/(λ*β**(i*dz/Z)) for (i,_) in enumerate(h[1:-1])])
-        Rsr = np.array([((dz/(λ*β**(i*dz/Z)*(_K[i])))*(1/(3600*24))) for (i,_) in enumerate(h[1:-1])])
+        Rsr = np.array([((dx/(λ*β**(i*dz/Z)*(_K[i])))*(1/(3600*24))) for (i,_) in enumerate(h[1:-1])]) 
         RWU = (h[1:-1] - Ψx)/(Rr + Rsr)  #m/d
         return RWU
     else:

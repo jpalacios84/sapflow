@@ -31,12 +31,12 @@ def invθ(θ): # h
 
 # Solver settings
 # ---------------
-sol_do_calibration_workflow = True
+sol_do_calibration_workflow = False
 sol_compute_residuals = True
 sol_compute_numerical_probes = False
 sol_datafile = './field_measurements/ES50_period1_single_day.csv'
 
-sol_use_RWU = False
+sol_use_RWU = True
 RWU_start_hour = 5
 RWU_end_hour = 22
 sol_use_free_drainage_bc = True # Soil physics with Hydrus ~pp190
